@@ -4,12 +4,6 @@ FIRST_NAME=""
 LAST_NAME=""
 
 check_student_project() {
-	if [ ! -d "${1}" ]; then
-		echo "le dossier de l'étudiant n'existe pas"
-		exit 1
-	fi
-
-	cd "${1}" || exit 1
 
 	if [ ! -f "main.c" ] || [ ! -f "Makefile" ] || [ ! -f "header.h" ] || [ ! -f "readme.txt" ]; then 
 		echo "il manque un fichier au dossier de l'étudiant"
@@ -19,7 +13,7 @@ check_student_project() {
 }
 
 create_grades_csv() {
-	if [ ! -f "../${CSV_FILE}" ]; then
+	if [ ! -f "${CSV_FILE}" ]; then
 		echo "Nom,Prénom,Note" > "../${CSV_FILE}"
 		echo "fichier note.csv crée"
 	fi
