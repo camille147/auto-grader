@@ -5,11 +5,17 @@ LAST_NAME=""
 
 check_student_project() {
 
-	if [ ! -f "main.c" ] || [ ! -f "Makefile" ] || [ ! -f "header.h" ] || [ ! -f "readme.txt" ]; then
-		echo "il manque un fichier au dossier de l'étudiant"
-		exit 1
-	fi
-	echo "dossier ok"
+        if [ ! -f "main.c" ] || [ ! -f "Makefile" ] || [ ! -f "readme.txt" ]; then
+                echo "il manque un fichier au dossier de l'étudiant"
+                exit 1
+        fi
+
+        if ! find . -maxdepth 1 -name "*.h" | grep -q .; then
+                echo "il manque un fichier header au dossier de l'étudiant. Il perd 2 points"
+                GRADE=$((GRADE - 2))
+        fi
+
+        echo "dossier ok"
 }
 
 create_grades_csv() {
@@ -23,19 +29,21 @@ check_and_create_executable() {
         make all > /dev/null
 
 	if ! find . -name "factorielle" -print -quit | grep -q .; then
-		GRADE=$((GRADE + 2))
-	else
 		GRADE=0
+	else
+		GRADE=$((GRADE + 2))
 	fi
 }
 
 check_factorial() {
 	good_answer=(1 2 6 24 120 720 5040 40320 362880 3628800)
 
-	for ((i=1; i<10; i++)) do
-		t_res=$(./factorielle "$i")
+	if ! find . -maxdepth 1 -name "*.h" | grep -q .; then
+		echo "le dossier élève ne contient pas de header.h . Le dossier n'est pas configurez pour fonctionner sans."
+	fi
 
-		if [ "$t_res" -ne "${good_answer[$((i - 1))]}" ]; then
+	for ((i=1; i<10; i++)) do
+		if [ $(./factorielle "$i") -ne "${good_answer[$((i - 1))]}" ]; then
 			echo "Les factorisation de 1 à 10 ne sont pas bonnes"
 			break
 		fi
@@ -44,8 +52,9 @@ check_factorial() {
 	if [ $(./factorielle 0) -eq 1 ]; then
 		GRADE=$((GRADE + 5))
 	fi
-
 }
+
+
 
 recover_informations() {
 	read -r line < readme.txt
@@ -78,11 +87,9 @@ main() {
 	check_student_project
 	create_grades_csv
 	recover_informations
-	number_caracter "main.c" "header.h"
 	check_and_create_executable
-	check_factorial
+        check_factorial
+	number_caracter "main.c" "header.h"
 	echo "${GRADE}"
 }
 main "${@}"
-
-
