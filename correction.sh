@@ -19,23 +19,32 @@ create_grades_csv() {
 	fi
 }
 
-check_and_play_student_program() {
-	if find . -name "Makefile"; then
-		echo "lancement du makefile"
-		make all
-		./factorielle 5
-		echo "executable lancé avec succès."
+check_and_create_executable() {
+        make all > /dev/null
+
+	if ! find . -name "factorielle" -print -quit | grep -q .; then
+		GRADE=$((GRADE + 2))
 	else
-		echo "Le projet ne dispose pas de fichier Makefile"
+		GRADE=0
 	fi
 }
 
 check_factorial() {
-	if [ "$number" -ge 1 -a "$number" -le 10 ]; then
-		echo "C'est une factoriel entre 1 et 10"
-	else
-		echo "Ce n'est pas une factoriel"
+	good_answer=(1 2 6 24 120 720 5040 40320 362880 3628800)
+
+	for ((i=1; i<10; i++)) do
+		t_res=$(./factorielle "$i")
+
+		if [ "$t_res" -ne "${good_answer[$((i - 1))]}" ]; then
+			echo "Les factorisation de 1 à 10 ne sont pas bonnes"
+			break
+		fi
+	done
+
+	if [ $(./factorielle 0) -eq 1 ]; then
+		GRADE=$((GRADE + 5))
 	fi
+
 }
 
 recover_informations() {
@@ -68,9 +77,10 @@ number_caracter() {
 main() {
 	check_student_project
 	create_grades_csv
-	check_and_play_student_program
 	recover_informations
 	number_caracter "main.c" "header.h"
+	check_and_create_executable
+	check_factorial
 	echo "${GRADE}"
 }
 main "${@}"
