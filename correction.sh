@@ -38,11 +38,41 @@ check_factorial() {
 	fi
 }
 
+recover_informations() {
+	read -r line < readme.txt
+	if [[ "${line}" =~ ^([^\ ]+)\ (.*)$ ]]; then
+		FIRST_NAME="${BASH_REMATCH[1]}"
+		LAST_NAME="${BASH_REMATCH[2]}"
+	fi
+}
+
+number_caracter() {
+	while [ "$#" -gt 0 ]; 
+	do
+		line_number=1
+
+		while IFS= read -r line
+		do
+			l=`printf "%s" "$line" | wc -c`
+			if [ "${l}" -gt 80 ]; then
+				GRADE=$((GRADE - 2))
+				echo "Une ligne fait plus de 80 caractères ${l} dans ${1} "
+				return 0
+			fi
+			line_number=$((line_number + 1))
+		done < "$1"
+		shift
+	done
+}
+
 main() {
 	check_student_project
 	create_grades_csv
 	check_and_play_student_program
+	recover_informations
+	number_caracter "main.c" "header.h"
+	echo "${GRADE}"
 }
-
 main "${@}"
+
 
