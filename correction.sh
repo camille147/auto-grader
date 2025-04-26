@@ -1,3 +1,5 @@
+#!/bin/bash
+
 CSV_FILE="note.csv"
 GRADE=0
 FIRST_NAME=""
@@ -46,6 +48,42 @@ recover_informations() {
 	fi
 }
 
+indentations() {
+	local indent_step=2
+
+    while [ "$#" -gt 0 ]; do
+        local file="$1"
+        local current_level=0
+        local line_number=0
+
+        echo "🔍 Vérification de l'indentation dans : $file"
+
+        while IFS= read -r line; do
+            ((line_number++))
+
+
+            [[ -z "$line" ]] && continue
+
+            local trimmed_line="${line#"${line%%[![:space:]]*}"}"
+            local actual_spaces=$(( ${#line} - ${#trimmed_line} ))
+            local expected_spaces=$((current_level * indent_step))
+
+            if [ "$actual_spaces" -ne "$expected_spaces" ]; then
+                echo "❌ Ligne $line_number : indentation incorrecte (attendu: $expected_spaces, trouvé: $actual_spaces)"
+            
+            fi
+            [[ "$trimmed_line" == "}"* ]] && ((current_level--))
+            ((current_level < 0)) && current_level=0
+
+            
+            [[ "$trimmed_line" == *"{"* ]] && ((current_level++))
+
+        done < "$file"
+
+        shift
+    done
+}
+
 number_caracter() {
 	while [ "$#" -gt 0 ]; 
 	do
@@ -71,8 +109,7 @@ main() {
 	check_and_play_student_program
 	recover_informations
 	number_caracter "main.c" "header.h"
+	indentations "main.c" "header.h"
 	echo "${GRADE}"
 }
 main "${@}"
-
-
