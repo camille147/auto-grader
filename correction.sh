@@ -32,9 +32,19 @@ check_and_create_executable() {
 
 	if ! find . -name "factorielle" -print -quit | grep -q .; then
 		GRADE=0
+		exit 1
 	else
 		GRADE=$((GRADE + 2))
 	fi
+}
+
+check_syntax_factorielle() {
+	while IFS= read -r line; do
+		if echo "$line" | grep -qE "^\s*int factorielle\s*\( int number \)\s*\r?$"; then
+			GRADE=$((GRADE + 2))
+			break
+		fi
+	done < main.c
 }
 
 check_factorial() {
@@ -55,8 +65,6 @@ check_factorial() {
 		GRADE=$((GRADE + 5))
 	fi
 }
-
-
 
 recover_informations() {
 	read -r line < readme.txt
@@ -88,12 +96,11 @@ indentations() {
 
             if [ "$actual_spaces" -ne "$expected_spaces" ]; then
                 echo "❌ Ligne $line_number : indentation incorrecte (attendu: $expected_spaces, trouvé: $actual_spaces)"
-            
+
             fi
             [[ "$trimmed_line" == "}"* ]] && ((current_level--))
             ((current_level < 0)) && current_level=0
 
-            
             [[ "$trimmed_line" == *"{"* ]] && ((current_level++))
 
         done < "$file"
@@ -128,6 +135,7 @@ main() {
 	check_and_create_executable
         check_factorial
 	number_caracter "main.c" "header.h"
+	check_syntax_factorielle
 	indentations "main.c" "header.h"
 	echo "${GRADE}"
 }
