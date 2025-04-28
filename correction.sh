@@ -66,41 +66,59 @@ recover_informations() {
 	fi
 }
 
+add_to_csv() {
+	echo "${LAST_NAME},${FIRST_NAME},${GRADE}" >> ${CSV_FILE}
+}
+
 indentations() {
-	local indent_step=2
+    local indent_step=2
+    local line_number=0
 
-    while [ "$#" -gt 0 ]; do
-        local file="$1"
-        local current_level=0
-        local line_number=0
-
+    for file in "$@"; do
         echo "🔍 Vérification de l'indentation dans : $file"
+        local current_level=0
 
-        while IFS= read -r line; do
+        while IFS= read -r line || [ -n "$line" ]; do
             ((line_number++))
 
-
-            [[ -z "$line" ]] && continue
+            if [[ -z "$line" || "$line" =~ ^[[:space:]]*$ ]]; then
+                continue
+            fi
 
             local trimmed_line="${line#"${line%%[![:space:]]*}"}"
             local actual_spaces=$(( ${#line} - ${#trimmed_line} ))
+
+            #si la ligne est une accolade fermante seule
+            if [[ "$trimmed_line" == "}"* ]]; then
+                ((current_level--))
+                ((current_level < 0)) && current_level=0
+            fi
+
             local expected_spaces=$((current_level * indent_step))
 
-            if [ "$actual_spaces" -ne "$expected_spaces" ]; then
-                echo "❌ Ligne $line_number : indentation incorrecte (attendu: $expected_spaces, trouvé: $actual_spaces)"
-            
+            #déclaration de fonction au début
+            if [[ "$trimmed_line" =~ ^int\ (factorielle|main)\  ]]; then
+                expected_spaces=0
             fi
-            [[ "$trimmed_line" == "}"* ]] && ((current_level--))
-            ((current_level < 0)) && current_level=0
 
-            
-            [[ "$trimmed_line" == *"{"* ]] && ((current_level++))
+            if [ "$actual_spaces" -ne "$expected_spaces" ]; then
+                echo "$line_number : indentation incorrecte (attendu: $expected_spaces, trouvé: $actual_spaces)"
+                GRADE=$((GRADE - 2))
+                return
+            fi
+
+            #si la ligne est une accolade ouvrante seule
+            if [[ "$trimmed_line" == "{"* ]]; then
+                ((current_level++))
+            fi
 
         done < "$file"
 
-        shift
+        current_level=0
+        line_number=0
     done
 }
+
 
 number_caracter() {
 	while [ "$#" -gt 0 ]; 
@@ -121,14 +139,43 @@ number_caracter() {
 	done
 }
 
+check_makefile_clean() {
+    local makefile="Makefile"
+    local executable="factorielle"
+
+    if [ ! -f "$makefile" ]; then
+        echo "pas de Makefile trouvé."
+        return 1
+    fi
+
+    if ! grep -qE '^clean:' "$makefile"; then
+        echo "pas de règle 'clean:' trouvée dans le Makefile."
+        return 1
+    fi
+
+    make clean > /dev/null 2>&1
+
+    if [ -f "$executable" ]; then
+        echo "❌ 'make clean' n'a pas supprimé l'exécutable '$executable'."
+        GRADE=$((GRADE - 2))
+        return 1
+    else
+        echo "'make clean' fonctionne correctement et supprime '$executable'."
+        return 0
+    fi
+}
+
+
 main() {
 	check_student_project
 	create_grades_csv
 	recover_informations
 	check_and_create_executable
-        check_factorial
+    check_factorial
 	number_caracter "main.c" "header.h"
 	indentations "main.c" "header.h"
+	check_makefile_clean
+	add_to_csv
 	echo "${GRADE}"
 }
 main "${@}"
