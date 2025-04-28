@@ -30,7 +30,7 @@ check_and_create_executable() {
 
 	if ! find . -name "factorielle" -print -quit | grep -q .; then
 		GRADE=0
-		echo "L'executable n'est pas trouvé."
+		echo "L'executable n'est pas trouvé. Le projet vaut 0/20"
 		exit 1
 	else
 		GRADE=$((GRADE + 2))
@@ -38,17 +38,27 @@ check_and_create_executable() {
 }
 
 check_syntax_factorielle() {
+	bool=false
+
 	while IFS= read -r line; do
-		if echo "$line" | grep -qE "^\s*int factorielle\s*\( int number \)\s*\r?$"; then
-			GRADE=$((GRADE + 2))
-			break
+		if echo "${line}" | grep -qE "^\s*int factorielle\s*\( int number \)\s*\r?$"; then
+			echo "La syntaxe de la fonction factorielle est correcte dans le main.c."
+			bool=true
 		fi
 	done < main.c
 
-	echo "La syntax de factorielle n'est pas correcte."
+	if [ "${bool}" = true ]; then
+		while IFS= read -r line; do
+                	if echo "${line}" | grep -qE "^\s*int factorielle\s*\( int number \);\s*\r?$"; then
+                        	GRADE=$((GRADE + 2))
+                        	echo "La syntaxe de la fonction factorielle est correcte dans le header.h."
+                        	return 0
+			fi
+        	done < header.h
+	fi
 }
 
-check_factorial() {
+check_factorial_1_to_10() {
 	good_answer=(1 2 6 24 120 720 5040 40320 362880 3628800)
 
 	if ! find . -maxdepth 1 -name "*.h" | grep -q .; then
@@ -56,18 +66,22 @@ check_factorial() {
 	fi
 
 	for ((i=1; i<10; i++)) do
-		if [ $(./factorielle "$i") -ne "${good_answer[$((i - 1))]}" ]; then
+		if [ $(./factorielle "${i}") -ne "${good_answer[$((i - 1))]}" ]; then
 			echo "Les factorisation de 1 à 10 ne sont pas bonnes."
-			break
+			return 0
 		fi
 	done
 
 	GRADE=$((GRADE + 5))
-	echo "Les factorisations de 1 à 10 compris sont corrects."
+        echo "Les factorisations de 1 à 10 compris sont corrects."
+}
 
+check_factorial_0() {
 	if [ $(./factorielle 0) -eq 1 ]; then
-		GRADE=$((GRADE + 3))
-		echo "La factorisation de 0 est correct."
+                GRADE=$((GRADE + 3))
+                echo "La factorisation de 0 est correct."
+        else
+		echo "La factorisation de 0 n'est pas bonnes."
 	fi
 }
 
@@ -100,13 +114,13 @@ indentations() {
     local line_number=0
 
     for file in "$@"; do
-        echo "🔍 Vérification de l'indentation dans : $file"
+        echo "🔍 Vérification de l'indentation dans : ${line}"
         local current_level=0
 
         while IFS= read -r line || [ -n "$line" ]; do
             ((line_number++))
 
-            if [[ -z "$line" || "$line" =~ ^[[:space:]]*$ ]]; then
+            if [[ -z "${line}" || "${line}" =~ ^[[:space:]]*$ ]]; then
                 continue
             fi
 
@@ -126,8 +140,8 @@ indentations() {
                 expected_spaces=0
             fi
 
-            if [ "$actual_spaces" -ne "$expected_spaces" ]; then
-                echo "$line_number : indentation incorrecte (attendu: $expected_spaces, trouvé: $actual_spaces)"
+            if [ "${actual_spaces}" -ne "${expected_spaces}" ]; then
+                echo "${line_number} : indentation incorrecte (attendu: ${expected_spaces}, trouvé: ${actual_spaces})"
                 GRADE=$((GRADE - 2))
                 return
             fi
@@ -137,7 +151,7 @@ indentations() {
                 ((current_level++))
             fi
 
-        done < "$file"
+        done < "${file}"
 
         current_level=0
         line_number=0
@@ -152,14 +166,14 @@ number_caracter() {
 
 		while IFS= read -r line
 		do
-			l=`printf "%s" "$line" | wc -c`
+			l=`printf "%s" "${line}" | wc -c`
 			if [ "${l}" -gt 80 ]; then
 				GRADE=$((GRADE - 2))
 				echo "Une ligne fait plus de 80 caractères ${l} dans ${1} "
 				return 0
 			fi
 			line_number=$((line_number + 1))
-		done < "$1"
+		done < "${1}"
 		shift
 	done
 }
@@ -168,19 +182,19 @@ check_makefile_clean() {
     local makefile="Makefile"
     local executable="factorielle"
 
-    if [ ! -f "$makefile" ]; then
+    if [ ! -f "${makefile}" ]; then
         echo "pas de Makefile trouvé."
         return 1
     fi
 
-    if ! grep -qE '^clean:' "$makefile"; then
+    if ! grep -qE '^clean:' "${makefile}"; then
         echo "pas de règle 'clean:' trouvée dans le Makefile."
         return 1
     fi
 
     make clean > /dev/null 2>&1
 
-    if [ -f "$executable" ]; then
+    if [ -f "${executable}" ]; then
         echo "❌ 'make clean' n'a pas supprimé l'exécutable '$executable'."
         GRADE=$((GRADE - 2))
         return 1
@@ -193,7 +207,8 @@ check_makefile_clean() {
 
 main() {
 	check_and_create_executable
-	check_factorial
+	check_factorial_1_to_10
+	check_factorial_0
 	check_syntax_factorielle
 	check_error_message
 	check_student_project
