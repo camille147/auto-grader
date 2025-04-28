@@ -8,16 +8,14 @@ LAST_NAME=""
 check_student_project() {
 
         if [ ! -f "main.c" ] || [ ! -f "Makefile" ] || [ ! -f "readme.txt" ]; then
-                echo "il manque un fichier au dossier de l'étudiant"
+                echo "Il manque un fichier au dossier de l'étudiant"
                 exit 1
         fi
 
         if ! find . -maxdepth 1 -name "*.h" | grep -q .; then
-                echo "il manque un fichier header au dossier de l'étudiant. Il perd 2 points"
+                echo "Il manque un fichier header au dossier de l'étudiant. Il perd 2 points."
                 GRADE=$((GRADE - 2))
         fi
-
-        echo "dossier ok"
 }
 
 create_grades_csv() {
@@ -32,6 +30,7 @@ check_and_create_executable() {
 
 	if ! find . -name "factorielle" -print -quit | grep -q .; then
 		GRADE=0
+		echo "L'executable n'est pas trouvé."
 		exit 1
 	else
 		GRADE=$((GRADE + 2))
@@ -45,6 +44,8 @@ check_syntax_factorielle() {
 			break
 		fi
 	done < main.c
+
+	echo "La syntax de factorielle n'est pas correcte."
 }
 
 check_factorial() {
@@ -56,13 +57,17 @@ check_factorial() {
 
 	for ((i=1; i<10; i++)) do
 		if [ $(./factorielle "$i") -ne "${good_answer[$((i - 1))]}" ]; then
-			echo "Les factorisation de 1 à 10 ne sont pas bonnes"
+			echo "Les factorisation de 1 à 10 ne sont pas bonnes."
 			break
 		fi
 	done
 
+	GRADE=$((GRADE + 5))
+	echo "Les factorisations de 1 à 10 compris sont corrects."
+
 	if [ $(./factorielle 0) -eq 1 ]; then
-		GRADE=$((GRADE + 5))
+		GRADE=$((GRADE + 3))
+		echo "La factorisation de 0 est correct."
 	fi
 }
 
@@ -76,6 +81,18 @@ recover_informations() {
 
 add_to_csv() {
 	echo "${LAST_NAME},${FIRST_NAME},${GRADE}" >> ${CSV_FILE}
+}
+
+check_error_message() {
+	if ./factorielle | grep -qE "^\s*Erreur:\s*Mauvais\s*nombre\s*de\s*parametres\s*\r?$"; then
+		GRADE=$((GRADE + 4))
+		echo "Le message d'erreur pour une factorisation sans paramètres est correct."
+	fi
+
+	if ./factorielle -1 | grep -qE "^\s*Erreur:\s*nombre\s*negatif\s*\r?$"; then
+		GRADE=$((GRADE + 4))
+		echo "Le message d'erreur pour une factorisation par un negatif est correct."
+	fi
 }
 
 indentations() {
@@ -175,16 +192,17 @@ check_makefile_clean() {
 
 
 main() {
+	check_and_create_executable
+	check_factorial
+	check_syntax_factorielle
+	check_error_message
 	check_student_project
 	create_grades_csv
 	recover_informations
-	check_and_create_executable
-        check_factorial
 	number_caracter "main.c" "header.h"
-	check_syntax_factorielle
 	indentations "main.c" "header.h"
 	check_makefile_clean
 	add_to_csv
-	echo "${GRADE}"
+	echo "🚀 L'élève a une note de ${GRADE}/20"
 }
 main "${@}"
